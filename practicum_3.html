@@ -1707,14 +1707,130 @@ function download(name, text, mime){
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 400);
 }
+
+/* ---------------------------------------------------- minimal .xlsx reader
+   An .xlsx is a zip of XML files. Rather than pull in a library, this reads
+   the zip's central directory by hand and inflates entries with the
+   browser's own DecompressionStream — no dependency, works fully offline. */
+function readZipDirectory(bytes){
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = -1;
+  const minPos = Math.max(0, bytes.length - 22 - 65557);
+  for(let i = bytes.length - 22; i >= minPos; i--){
+    if(dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  }
+  if(eocd < 0) throw new Error("not a valid .xlsx file");
+  const cdOffset = dv.getUint32(eocd + 16, true);
+  const cdCount = dv.getUint16(eocd + 10, true);
+  const entries = {};
+  let p = cdOffset;
+  for(let i = 0; i < cdCount; i++){
+    if(dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true);
+    const compSize = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true);
+    const extraLen = dv.getUint16(p + 30, true);
+    const commentLen = dv.getUint16(p + 32, true);
+    const localOffset = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    entries[name] = {method, compSize, localOffset};
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return entries;
+}
+async function readZipEntry(bytes, entry){
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const p = entry.localOffset;
+  if(dv.getUint32(p, true) !== 0x04034b50) throw new Error("corrupt .xlsx entry");
+  const nameLen = dv.getUint16(p + 26, true);
+  const extraLen = dv.getUint16(p + 28, true);
+  const dataStart = p + 30 + nameLen + extraLen;
+  const compData = bytes.subarray(dataStart, dataStart + entry.compSize);
+  if(entry.method === 0) return compData;
+  if(entry.method === 8){
+    if(typeof DecompressionStream === "undefined")
+      throw new Error("this browser can't unzip .xlsx files — try a recent Chrome, Edge, Firefox or Safari");
+    const stream = new Blob([compData]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  throw new Error("unsupported .xlsx compression");
+}
+function colFromRef(ref){
+  const m = String(ref||"").match(/^([A-Z]+)/i);
+  if(!m) return 0;
+  let n = 0;
+  for(const ch of m[1].toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1;
+}
+async function xlsxToCSV(arrayBuffer){
+  const bytes = new Uint8Array(arrayBuffer);
+  const dir = readZipDirectory(bytes);
+  const readText = async name => { const e = dir[name]; if(!e) return null;
+    return new TextDecoder("utf-8").decode(await readZipEntry(bytes, e)); };
+  const workbookXml = await readText("xl/workbook.xml");
+  if(!workbookXml) throw new Error("that doesn't look like a valid .xlsx file");
+  const parser = new DOMParser();
+  let sheetPath = "xl/worksheets/sheet1.xml";
+  const wbDoc = parser.parseFromString(workbookXml, "application/xml");
+  const sheetEl = wbDoc.getElementsByTagName("sheet")[0];
+  const relsXml = await readText("xl/_rels/workbook.xml.rels");
+  if(sheetEl && relsXml){
+    const rid = sheetEl.getAttribute("r:id") || sheetEl.getAttribute("id");
+    const relsDoc = parser.parseFromString(relsXml, "application/xml");
+    const rel = Array.from(relsDoc.getElementsByTagName("Relationship")).find(r => r.getAttribute("Id") === rid);
+    if(rel){ const target = rel.getAttribute("Target").replace(/^\.?\//, "");
+      sheetPath = target.startsWith("xl/") ? target : "xl/" + target; }
+  }
+  const sheetXml = await readText(sheetPath) || await readText("xl/worksheets/sheet1.xml");
+  if(!sheetXml) throw new Error("couldn't find a worksheet in that file");
+  const sharedXml = await readText("xl/sharedStrings.xml");
+  let shared = [];
+  if(sharedXml){
+    const ssDoc = parser.parseFromString(sharedXml, "application/xml");
+    shared = Array.from(ssDoc.getElementsByTagName("si")).map(si =>
+      Array.from(si.getElementsByTagName("t")).map(t => t.textContent).join(""));
+  }
+  const sheetDoc = parser.parseFromString(sheetXml, "application/xml");
+  const rows = Array.from(sheetDoc.getElementsByTagName("row")).map(rowEl => {
+    const out = [];
+    Array.from(rowEl.getElementsByTagName("c")).forEach(c => {
+      const idx = colFromRef(c.getAttribute("r")) || out.length;
+      const type = c.getAttribute("t");
+      let val = "";
+      if(type === "inlineStr"){ const isEl = c.getElementsByTagName("is")[0];
+        val = isEl ? Array.from(isEl.getElementsByTagName("t")).map(t => t.textContent).join("") : ""; }
+      else { const vEl = c.getElementsByTagName("v")[0];
+        if(vEl) val = type === "s" ? (shared[+vEl.textContent] || "") : vEl.textContent; }
+      while(out.length < idx) out.push("");
+      out[idx] = val;
+    });
+    return out;
+  });
+  const width = rows.reduce((m,r) => Math.max(m, r.length), 0);
+  const padded = rows.map(r => { const o = r.slice(); while(o.length < width) o.push(""); return o; });
+  return toCSV(padded[0]||[], padded.slice(1));
+}
+function loadSpreadsheetFile(file, onText){
+  const r = new FileReader();
+  if(/\.xlsx$/i.test(file.name)){
+    r.onload = async () => {
+      try { onText(await xlsxToCSV(r.result)); }
+      catch(e){ toast("Couldn't read that .xlsx file — "+e.message+".", true); }
+    };
+    r.readAsArrayBuffer(file);
+  } else {
+    r.onload = () => onText(r.result);
+    r.readAsText(file);
+  }
+}
 function importStudents(){
   openModal({title:"Import a student roster", wide:true,
-    body:`<p style="margin-top:0;font-size:13px">Paste from a spreadsheet, or choose a CSV file. The first row must be
+    body:`<p style="margin-top:0;font-size:13px">Paste from a spreadsheet, or choose a CSV or Excel (.xlsx) file. The first row must be
       a header. Practicum matches these column names, in any order, and ignores anything else:</p>
       <p class="mono" style="background:#F7F9F4;padding:9px;border-radius:4px;border:1px solid var(--line)">
       first, last, student id, grade, grad year, email, preferred grade, content area, second content,
       career, transportation, transportation notes, required hours, parent, parent email, parent phone, notes</p>
-      <input type="file" accept=".csv,.txt,.tsv" id="csvFile" style="margin-bottom:10px">
+      <input type="file" accept=".csv,.txt,.tsv,.xlsx" id="csvFile" style="margin-bottom:10px">
       <textarea class="in" id="csvText" style="min-height:160px" placeholder="first,last,student id,grade,email
 Jordan,Pham,HDG-24200,11,jpham@student.hcps.org"></textarea>
       <div id="csvPreview"></div>`,
@@ -1723,9 +1839,7 @@ Jordan,Pham,HDG-24200,11,jpham@student.hcps.org"></textarea>
     after(){
       $("#csvFile").onchange = e => {
         const f = e.target.files[0]; if(!f) return;
-        const r = new FileReader();
-        r.onload = () => { $("#csvText").value = r.result; previewCSV(); };
-        r.readAsText(f);
+        loadSpreadsheetFile(f, text => { $("#csvText").value = text; previewCSV(); });
       };
       $("#csvText").oninput = previewCSV;
       $("#csvGo").onclick = () => {
@@ -1782,7 +1896,8 @@ function mapCSV(text){
   };
   const used = Object.keys(M).filter(k => M[k] >= 0);
   const out = [];
-  const matchOne = (v, list) => list.find(x => x.toLowerCase().includes(String(v||"").toLowerCase().slice(0,6))) || null;
+  const matchOne = (v, list) => { const s = String(v||"").trim(); if(!s) return null;
+    return list.find(x => x.toLowerCase().includes(s.toLowerCase().slice(0,6))) || null; };
   rows.slice(1).forEach(r => {
     const g = i => i >= 0 ? String(r[i]||"").trim() : "";
     let first = g(M.first), last = g(M.last);
@@ -1839,10 +1954,10 @@ function guessTeacherContent(text){
 }
 function guessTeacherGrade(text){
   text = String(text||"");
-  if(/pre-?k/i.test(text)) return "PreK";
+  if(/pre-?k(indergarten)?/i.test(text)) return "PreK";
   const nums = (text.match(/\d{1,2}/g)||[]).filter(n => GRADES.includes(n));
   if(nums.length) return nums[0];
-  if(/\bK\b/i.test(text)) return "K";
+  if(/\bK\b/i.test(text) || /kindergarten/i.test(text)) return "K";
   return "";
 }
 function mapTAMRoster(text){
@@ -1866,7 +1981,8 @@ function mapTAMRoster(text){
   };
   if(M.teacherName < 0 && M.studentFirst < 0 && M.studentLast < 0)
     return {rows:[], error:"Couldn't find the expected headers — check the column names match exactly."};
-  const matchOne = (v, list) => list.find(x => x.toLowerCase().includes(String(v||"").toLowerCase().slice(0,6))) || null;
+  const matchOne = (v, list) => { const s = String(v||"").trim(); if(!s) return null;
+    return list.find(x => x.toLowerCase().includes(s.toLowerCase().slice(0,6))) || null; };
   const yesNo = v => /^\s*(y|yes|true|x)\s*$/i.test(String(v||""));
   const out = [];
   rows.slice(1).forEach(r => {
@@ -1876,18 +1992,28 @@ function mapTAMRoster(text){
     const contentGrade = g(M.teacherContentGrade);
     const parentContact = g(M.parentContact);
     const levelMatch = matchOne(g(M.levelRequest), BANDS);
-    const contentMatch = matchOne(g(M.contentRequest), CONTENT);
+    // Content Request often comes from a multi-select checkbox question, exported
+    // as semicolon-separated choices (e.g. "Social Studies;Science;Math;") — match
+    // every token, not just the first, so no selection gets silently dropped.
+    const contentChoices = [...new Set(g(M.contentRequest).split(";").map(t => matchOne(t.trim(), CONTENT)).filter(Boolean))];
     const gradeRequest = g(M.gradeRequest);
+    const guessedGrade = guessTeacherGrade(contentGrade);
+    // A self-contained elementary teacher's answer is often just a grade
+    // ("3rd grade teacher", "Kindergarten") with no subject named at all —
+    // that means General elementary, not "couldn't tell".
+    const guessedContent = guessTeacherContent(contentGrade) ||
+      (["PreK","K","1","2","3","4","5"].includes(guessedGrade) ? "General elementary" : "");
     out.push({
       teacher: teacherName ? {
         name: teacherName, email: g(M.teacherEmail), schoolName: g(M.teacherSchool),
         specialEducator: yesNo(g(M.specialEd)), program: g(M.program), tamSite: g(M.tamSite),
-        contentArea: guessTeacherContent(contentGrade), gradeLevel: guessTeacherGrade(contentGrade)
+        contentArea: guessedContent, gradeLevel: guessedGrade
       } : null,
       student: (first || last) ? {
         first, last, email: g(M.studentEmail), preferredName: g(M.preferredName),
         grade: ["9","10","11","12"].includes(gradeRequest) ? gradeRequest : "11",
-        prefBands: levelMatch ? [levelMatch] : [], prefContent: contentMatch ? [contentMatch] : [],
+        prefBands: levelMatch ? [levelMatch] : [], prefContent: contentChoices.slice(0,1),
+        secondContent: contentChoices.slice(1),
         teacherRequest: g(M.teacherRequest), tamTeacher: g(M.tamTeacher), schoolNurse: g(M.schoolNurse),
         parentName: g(M.parent), parentEmail: parentContact.includes("@") ? parentContact : "",
         parentPhone: parentContact && !parentContact.includes("@") ? parentContact : ""
@@ -1898,10 +2024,10 @@ function mapTAMRoster(text){
 }
 function importTAMRoster(){
   openModal({title:"Import TAM spreadsheet", wide:true,
-    body:`<p style="margin-top:0;font-size:13px">Paste from a spreadsheet, or choose a file. The first row must have exactly these headers, in any order:</p>
+    body:`<p style="margin-top:0;font-size:13px">Paste from a spreadsheet, or choose a CSV or Excel (.xlsx) file. The first row must have exactly these headers, in any order:</p>
       <p class="mono" style="background:#F7F9F4;padding:9px;border-radius:4px;border:1px solid var(--line);font-size:12px">${esc(TAM_HEADERS.join(", "))}</p>
       <p class="hint" style="margin-top:0">Each row creates or updates a cooperating teacher (and their school) and a student. It does not create a placement — run Match afterward to place each student with a teacher.</p>
-      <input type="file" accept=".csv,.txt,.tsv" id="tamFile" style="margin-bottom:10px">
+      <input type="file" accept=".csv,.txt,.tsv,.xlsx" id="tamFile" style="margin-bottom:10px">
       <textarea class="in" id="tamText" style="min-height:160px" placeholder="Teacher Name,Teacher HCPS Email,Teacher School,..."></textarea>
       <div id="tamPreview"></div>`,
     foot:`<div class="fill"></div><button class="btn" onclick="closeModal()">Cancel</button>
@@ -1909,9 +2035,7 @@ function importTAMRoster(){
     after(){
       $("#tamFile").onchange = e => {
         const f = e.target.files[0]; if(!f) return;
-        const r = new FileReader();
-        r.onload = () => { $("#tamText").value = r.result; previewTAMRoster(); };
-        r.readAsText(f);
+        loadSpreadsheetFile(f, text => { $("#tamText").value = text; previewTAMRoster(); });
       };
       $("#tamText").oninput = previewTAMRoster;
       $("#tamGo").onclick = () => {
