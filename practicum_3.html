@@ -1136,6 +1136,17 @@ function computeAlerts(){
       title:t.title, detail:"Due "+fmtDate(t.due)+(t.due<T?" — overdue":""),
       act:`editTask('${t.id}')`, actLabel:"Open"});
   });
+  if(DB.students.length + DB.schools.length + DB.teachers.length > 0){
+    const daysSince = DB.lastBackupAt ? daysBetween(iso(new Date(DB.lastBackupAt)), T) : Infinity;
+    if(daysSince >= 3){
+      const bucket = Math.floor(daysBetween("2020-01-01", T) / 3);
+      add({id:"al_backup_"+bucket, priority:"Medium", kind:"Backup",
+        title: DB.lastBackupAt ? "No backup in "+daysSince+" days" : "This data has never been backed up",
+        detail:"Everything here lives only in this browser's storage — a private window, a different browser, "+
+          "or opening the file from a different location will not see it. Download a backup to keep it safe.",
+        act:"backup()", actLabel:"Download a backup"});
+    }
+  }
   const rank = {High:0, Medium:1, Low:2};
   return out.sort((a,b) => rank[a.priority]-rank[b.priority] || a.title.localeCompare(b.title));
 }
@@ -4512,8 +4523,11 @@ RENDER.settings = function(){
           <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restore(this)">
         </div>
         <div class="divider"></div>
-        <p class="hint">Last saved ${esc(new Date(DB.updatedAt).toLocaleString())} ·
+        <p class="hint">Last saved to this browser ${esc(new Date(DB.updatedAt).toLocaleString())} ·
           ${DB.students.length} students, ${DB.sessions.length} sessions, ${DB.comms.length} messages on file.</p>
+        <p class="hint">Last backup downloaded: ${DB.lastBackupAt ? esc(new Date(DB.lastBackupAt).toLocaleString()) : "never"}.
+          "Saved" only means it's in this browser's storage — a private window, a different browser, or opening the
+          file from another location starts blank. The backup file is the only copy that survives that.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn dang" onclick="startEmpty()">Erase the sample data</button>
           <button class="btn" onclick="resetAll()">Put the sample data back</button></div>
@@ -4566,6 +4580,8 @@ function deleteProgram(id){
   });
 }
 function backup(){
+  DB.lastBackupAt = new Date().toISOString();
+  saveDB(true);
   download("practicum-backup-"+today()+".json", JSON.stringify(DB,null,2), "application/json");
   toast("Backup downloaded.");
 }
