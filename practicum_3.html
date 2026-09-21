@@ -587,7 +587,7 @@ function seed(){
       11.2,22,3,"Paused this year while the building is under renovation.",false)
   ];
 
-  /* --- cooperating teachers ------------------------------------------- */
+  /* --- partnering teachers ------------------------------------------- */
   const T = (id,schoolId,name,email,grade,content,days,pref,max,notes) =>
     ({id,programId:PID,schoolId,name,email,gradeLevel:grade,contentArea:content,
       days,preferredInterns:pref,maxInterns:max,notes});
@@ -735,9 +735,9 @@ function seedActivity(db){
     E("2026-09-24","meeting","Teacher Academy advisory meeting","3:00 PM, media center"),
     E("2026-10-15","unavail","Facilitator at MACTE conference"),
     E("2026-10-16","unavail","Facilitator at MACTE conference"),
-    E("2027-01-15","deadline","Cooperating teacher mid-point evaluations open"),
+    E("2027-01-15","deadline","Partnering teacher mid-point evaluations open"),
     E("2027-04-23","deadline","All internship hours must be logged"),
-    E("2027-05-05","deadline","Final evaluations due from cooperating teachers"),
+    E("2027-05-05","deadline","Final evaluations due from partnering teachers"),
     E("2026-09-30","meeting","Placement check-in with Meadowvale front office","With Angela Ruiz","sch_mead")
   ];
   const closed = new Set(db.events.filter(e => ["holiday","noschool","pd"].includes(e.type)).map(e => e.date));
@@ -780,8 +780,8 @@ function seedActivity(db){
       createdAt: addDays(start,-21),
       history:[{date:addDays(start,-21),note:"Placement created"}]
     };
-    if(status!=="Proposed") p.history.push({date:addDays(start,-14),note:"Placement requested from cooperating teacher"});
-    if(p.confirmedOn) p.history.push({date:p.confirmedOn,note:"Confirmed by cooperating teacher"});
+    if(status!=="Proposed") p.history.push({date:addDays(start,-14),note:"Placement requested from partnering teacher"});
+    if(p.confirmedOn) p.history.push({date:p.confirmedOn,note:"Confirmed by partnering teacher"});
     if(status==="Declined") p.history.push({date:"2026-10-05",note:"Closed — student withdrew from the program"});
     db.placements.push(p);
   });
@@ -897,7 +897,7 @@ function seedActivity(db){
     {id:uid("tk"),programId:PID,title:"Order Teacher Academy name badges for new interns",due:"2026-09-16",priority:"Low",done:false,notes:"",link:null},
     {id:uid("tk"),programId:PID,title:"Build the October observation rotation",due:"2026-09-30",priority:"Medium",done:false,notes:"Two per student before Thanksgiving.",link:null},
     {id:uid("tk"),programId:PID,title:"Confirm sub coverage for conference days Oct 15–16",due:"2026-10-08",priority:"Medium",done:false,notes:"",link:null},
-    {id:uid("tk"),programId:PID,title:"Send fall welcome letter to cooperating teachers",due:"2026-09-04",priority:"Medium",done:true,notes:"",link:null}
+    {id:uid("tk"),programId:PID,title:"Send fall welcome letter to partnering teachers",due:"2026-09-04",priority:"Medium",done:true,notes:"",link:null}
   ];
 
   /* --- evaluations for the completed spring cohort ---------------------- */
@@ -1032,7 +1032,7 @@ function openQuickAdd(){
     body:`<div class="list">
       <div class="row clk" onclick="closeModal();editStudent()"><div class="gr"><div class="ttl">Student</div><div class="mt">One record, or import a roster from CSV</div></div></div>
       <div class="row clk" onclick="closeModal();editSchool()"><div class="gr"><div class="ttl">School</div><div class="mt">A new partner building</div></div></div>
-      <div class="row clk" onclick="closeModal();editTeacher()"><div class="gr"><div class="ttl">Cooperating teacher</div><div class="mt">Attach to a school and set capacity</div></div></div>
+      <div class="row clk" onclick="closeModal();editTeacher()"><div class="gr"><div class="ttl">Partnering teacher</div><div class="mt">Attach to a school and set capacity</div></div></div>
       <div class="row clk" onclick="closeModal();editPlacement()"><div class="gr"><div class="ttl">Placement</div><div class="mt">Match a student to a teacher</div></div></div>
       <div class="row clk" onclick="closeModal();editEvent()"><div class="gr"><div class="ttl">Calendar event</div><div class="mt">Holiday, meeting, deadline, day off</div></div></div>
       <div class="row clk" onclick="closeModal();editTask()"><div class="gr"><div class="ttl">Task</div><div class="mt">Something to follow up on</div></div></div>
@@ -1521,7 +1521,7 @@ function studentOverview(s,p){
       <div class="card"><h3>Placement</h3>
         ${p ? `<dl class="kv">
           <dt>School</dt><dd>${esc(schName(p.schoolId))}</dd>
-          <dt>Cooperating teacher</dt><dd>${esc(tchName(p.teacherId))}<div class="sm2">${esc((tch(p.teacherId)||{}).email||"")}</div></dd>
+          <dt>Partnering teacher</dt><dd>${esc(tchName(p.teacherId))}<div class="sm2">${esc((tch(p.teacherId)||{}).email||"")}</div></dd>
           <dt>Grade / content</dt><dd>Grade ${esc((tch(p.teacherId)||{}).gradeLevel||"—")} · ${esc((tch(p.teacherId)||{}).contentArea||"—")}</dd>
           <dt>Days</dt><dd>${esc(p.days.join(", "))} · ${esc(timeRange(p.startTime,p.endTime))}</dd>
           <dt>Runs</dt><dd>${fmtDate(p.startDate,true)} → ${fmtDate(p.endDate,true)}</dd>
@@ -1614,7 +1614,7 @@ function studentComms(s){
 function studentEval(s,p){
   const ev = evaluations().find(e => e.studentId === s.id);
   if(!ev) return `<div class="empty"><b>No evaluation on file</b>
-    <p>The cooperating teacher completes this at the end of the internship.</p>
+    <p>The partnering teacher completes this at the end of the internship.</p>
     <div style="display:flex;gap:8px;justify-content:center">
       <button class="btn" onclick="composeEmail({type:'Evaluation request',studentId:'${s.id}'})">Request it by email</button>
       <button class="btn pri" onclick="editEval(null,'${s.id}')">Record one now</button></div></div>`;
@@ -1979,7 +1979,7 @@ function mapCSV(text){
 
 /* ------------------------------------------------ TAM combined spreadsheet
    One row = a teacher's request plus the student they're asking for.
-   Creates/updates the cooperating teacher (and their school) and the
+   Creates/updates the partnering teacher (and their school) and the
    student, but never a placement — there's no schedule in this sheet, so
    placing still goes through the usual Match tool. */
 const TAM_HEADERS = ["Teacher Name","Teacher HCPS Email","Teacher School","Are you a special educator?",
@@ -2081,7 +2081,7 @@ function importTAMRoster(){
   openModal({title:"Import TAM spreadsheet", wide:true,
     body:`<p style="margin-top:0;font-size:13px">Paste from a spreadsheet, or choose a CSV or Excel (.xlsx) file. The first row must have exactly these headers, in any order:</p>
       <p class="mono" style="background:#F7F9F4;padding:9px;border-radius:4px;border:1px solid var(--line);font-size:12px">${esc(TAM_HEADERS.join(", "))}</p>
-      <p class="hint" style="margin-top:0">Each row creates or updates a cooperating teacher (and their school) and a student. It does not create a placement — run Match afterward to place each student with a teacher.</p>
+      <p class="hint" style="margin-top:0">Each row creates or updates a partnering teacher (and their school) and a student. It does not create a placement — run Match afterward to place each student with a teacher.</p>
       <input type="file" accept=".csv,.txt,.tsv,.xlsx" id="tamFile" style="margin-bottom:10px">
       <textarea class="in" id="tamText" style="min-height:160px" placeholder="Teacher Name,Teacher HCPS Email,Teacher School,..."></textarea>
       <div id="tamPreview"></div>`,
@@ -2202,7 +2202,7 @@ RENDER.schools = function(){
           open ? `<span class="tag t-sage">${open}</span>` : `<span class="tag t-slate">full</span>`,
           s.active ? `<span class="tag t-sage">Active</span>` : `<span class="tag t-slate">Inactive</span>`]};
     }),
-    `<b>No schools yet</b><p>Add the first partner building and its cooperating teachers.</p>
+    `<b>No schools yet</b><p>Add the first partner building and its partnering teachers.</p>
      <button class="btn pri" onclick="editSchool()">Add a school</button>`)}`;
 };
 function openSchool(id){
@@ -2233,7 +2233,7 @@ function openSchool(id){
         </div>
         <div class="card"><h3>At a glance</h3>
           <div class="grid g2">
-            <div class="stat"><div class="n">${tt.length}</div><div class="l">Cooperating teachers</div></div>
+            <div class="stat"><div class="n">${tt.length}</div><div class="l">Partnering teachers</div></div>
             <div class="stat ${schoolCapacity(id)?"good":"warn"}"><div class="n">${schoolCapacity(id)}</div><div class="l">Open seats</div></div>
             <div class="stat acc"><div class="n">${schoolFilled(id)}</div><div class="l">Filled placements</div></div>
             <div class="stat"><div class="n">${hrs}</div><div class="l">Intern hours logged here</div></div>
@@ -2242,7 +2242,7 @@ function openSchool(id){
         </div>
       </div>
       <div>
-        <div class="card"><h3>Cooperating teachers</h3>
+        <div class="card"><h3>Partnering teachers</h3>
           ${table("schteach",[{k:"n",label:"Teacher"},{k:"g",label:"Grade / content"},{k:"d",label:"Days"},{k:"c",label:"Capacity",num:true}],
             tt.map(t => ({__:{n:t.name,g:t.gradeLevel,d:t.days.join(""),c:teacherCapacity(t.id)},
               click:`openTeacher('${t.id}')`,
@@ -2250,7 +2250,7 @@ function openSchool(id){
                 `Grade ${esc(t.gradeLevel)}<div class="sm2">${esc(t.contentArea)}</div>`,
                 esc(t.days.join(", ")),
                 `${teacherLoad(t.id)} / ${t.maxInterns}${teacherCapacity(t.id)?` <span class="tag t-sage">${teacherCapacity(t.id)} open</span>`:""}`]})),
-            `<b>No teachers on file here</b><p>Add the first cooperating teacher.</p>`)}
+            `<b>No teachers on file here</b><p>Add the first partnering teacher.</p>`)}
           <div style="margin-top:10px"><button class="btn" onclick="editTeacher(null,'${id}')">Add a teacher</button></div>
         </div>
         <div class="card"><h3>Students placed here</h3>
@@ -2326,7 +2326,7 @@ function deleteSchool(id){
   const n = teachers().filter(t => t.schoolId === id).length;
   const p = placements().filter(x => x.schoolId === id && ["Active","Confirmed"].includes(x.status)).length;
   if(p) return toast("Close the "+p+" live placement"+(p===1?"":"s")+" at this school first.", true);
-  confirmAction("Delete "+schName(id)+"?", n+" cooperating teacher record"+(n===1?"":"s")+" will go with it.", () => {
+  confirmAction("Delete "+schName(id)+"?", n+" partnering teacher record"+(n===1?"":"s")+" will go with it.", () => {
     DB.schools = DB.schools.filter(x => x.id !== id);
     DB.teachers = DB.teachers.filter(x => x.schoolId !== id);
     saveDB(); closeAllModals(); render(); toast("School deleted.");
@@ -2334,7 +2334,7 @@ function deleteSchool(id){
 }
 
 /* =========================================================================
-   Cooperating teachers
+   Partnering teachers
    ========================================================================= */
 RENDER.teachers = function(){
   const f = UI.filters.teachers = UI.filters.teachers || {q:"",school:"",content:"",cap:""};
@@ -2346,7 +2346,7 @@ RENDER.teachers = function(){
   if(f.cap === "full") list = list.filter(t => teacherCapacity(t.id) === 0);
   return `
   <div class="phead">
-    <div><h1>Cooperating teachers</h1><p>${teachers().length} on file · ${teachers().filter(t=>teacherCapacity(t.id)>0).length} with room for another intern.</p></div>
+    <div><h1>Partnering teachers</h1><p>${teachers().length} on file · ${teachers().filter(t=>teacherCapacity(t.id)>0).length} with room for another intern.</p></div>
     <div class="sp"><button class="btn" onclick="importTAMRoster()">Import TAM spreadsheet</button>
       <button class="btn" onclick="exportCSV('teachers')">Export CSV</button>
       <button class="btn pri" onclick="editTeacher()">Add a teacher</button></div>
@@ -2369,7 +2369,7 @@ RENDER.teachers = function(){
         `${teacherLoad(t.id)} / ${t.maxInterns}${teacherCapacity(t.id)?` <span class="tag t-sage">open</span>`:` <span class="tag t-slate">full</span>`}`,
         placements().filter(p => p.teacherId===t.id && p.status!=="Declined")
           .map(p => esc(stuName(p.studentId))).join("<br>") || `<span class="sm2">—</span>`]})),
-    `<b>No cooperating teachers yet</b><p>Add teachers under the school that hosts them.</p>
+    `<b>No partnering teachers yet</b><p>Add teachers under the school that hosts them.</p>
      <button class="btn pri" onclick="editTeacher()">Add a teacher</button>`)}`;
 };
 function openTeacher(id){
@@ -2419,7 +2419,7 @@ function editTeacher(id, schoolId){
   const t = id ? tch(id) : {name:"",email:"",schoolId:schoolId||(schools()[0]||{}).id,gradeLevel:"3",
     contentArea:"General elementary",days:["Tue","Thu"],preferredInterns:1,maxInterns:2,notes:"",
     specialEducator:false,program:"",tamSite:""};
-  openModal({title: id ? "Edit "+t.name : "Add a cooperating teacher",
+  openModal({title: id ? "Edit "+t.name : "Add a partnering teacher",
     body:`<div class="fgrid">
       <div><label class="f">Name</label><input class="in" id="f_name" value="${attr(t.name)}"></div>
       <div><label class="f">Email</label><input class="in" id="f_email" value="${attr(t.email)}"></div>
@@ -2576,7 +2576,7 @@ function editPlacement(id, studentId, teacherId){
     body:`<div class="fgrid">
       <div><label class="f">Student</label><select class="in" id="p_stu" ${id?"disabled":""}>${selectOpts(
         students().filter(x=>x.status!=="Withdrawn").map(x=>({v:x.id,l:x.first+" "+x.last})), sId)}</select></div>
-      <div><label class="f">Cooperating teacher</label><select class="in" id="p_t" onchange="placementTeacherChanged()">${selectOpts(
+      <div><label class="f">Partnering teacher</label><select class="in" id="p_t" onchange="placementTeacherChanged()">${selectOpts(
         teachers().map(x=>({v:x.id,l:x.name+" — "+schName(x.schoolId)+" (Gr "+x.gradeLevel+" "+x.contentArea+")"})), tId)}</select>
         <div class="hint" id="p_cap"></div></div>
       <div class="full"><label class="f">Days on site</label>${chipGroup("pd",DAYS,d.days)}
@@ -2882,7 +2882,7 @@ RENDER.hours = function(){
   const unver = sessions().filter(s => ["Present","Late"].includes(s.status) && !s.verified).length;
   return `
   <div class="phead">
-    <div><h1>Hours &amp; attendance</h1><p>${logged} hours logged across the cohort · ${unver} session${unver===1?"":"s"} not yet verified by a cooperating teacher.</p></div>
+    <div><h1>Hours &amp; attendance</h1><p>${logged} hours logged across the cohort · ${unver} session${unver===1?"":"s"} not yet verified by a partnering teacher.</p></div>
     <div class="sp"><button class="btn" onclick="exportCSV('sessions')">Export CSV</button>
       <button class="btn pri" onclick="addSession()">Log a session</button></div>
   </div>
@@ -2941,7 +2941,7 @@ function openSessionEditor(id, studentId){
       <div><label class="f">Actual end</label><input class="in" id="ss_ae" type="time" value="${attr(d.actualEnd||"")}" onchange="sessionTimesChanged()"></div>
       <div class="full"><label class="f">Activity or lesson observed</label><input class="in" id="ss_act" value="${attr(d.activity)}"></div>
       <div class="full"><label class="f">Student reflection</label><textarea class="in" id="ss_ref">${esc(d.reflection||"")}</textarea></div>
-      <div class="full"><label class="f"><input type="checkbox" id="ss_ver" ${d.verified?"checked":""}> Verified by the cooperating teacher</label></div>
+      <div class="full"><label class="f"><input type="checkbox" id="ss_ver" ${d.verified?"checked":""}> Verified by the partnering teacher</label></div>
       <div class="full"><label class="f">Notes</label><input class="in" id="ss_notes" value="${attr(d.notes||"")}"></div>
     </div>
     ${p?`<p class="hint">Placement: ${esc(schName(p.schoolId))} · ${esc(tchName(p.teacherId))}</p>`:
@@ -3150,7 +3150,7 @@ function mergeFields(ctx){
     schoolDistance: sc ? (sc.distanceMiles + " miles · about " + sc.driveMinutes + " minutes") : "",
     schoolFilled: sc ? schoolFilled(sc.id) : "",
     schoolOpen: sc ? schoolCapacity(sc.id) : "",
-    teacher: t ? t.name : "the cooperating teacher",
+    teacher: t ? t.name : "the partnering teacher",
     teacherEmail: t ? t.email : "",
     teacherGrade: t ? "Grade "+t.gradeLevel : "",
     teacherContent: t ? t.contentArea : "",
@@ -3187,7 +3187,7 @@ const MERGE_FIELDS = [
   ["guardian","Parent or guardian name"],["guardianEmail","Guardian email"],["guardianPhone","Guardian phone"],
   ["transport","Transportation plan"],["transportNotes","Transportation notes"],
   ["school","Placement school"],["schoolAddress","School address"],["schoolContact","School main contact"],
-  ["teacher","Cooperating teacher"],["teacherEmail","Cooperating teacher email"],
+  ["teacher","Partnering teacher"],["teacherEmail","Partnering teacher email"],
   ["teacherGrade","Teacher grade level"],["teacherContent","Teacher content area"],
   ["days","Internship days"],["times","Internship times"],["dates","Full date range"],
   ["startDate","First day"],["endDate","Last day"],
@@ -3208,7 +3208,7 @@ const BUILTIN_TEMPLATES = {
 "Initial introduction":{s:"Teacher Academy internships — introducing our program",
 b:`Dear {{schoolContact}},
 
-I run the {{program}}. Our juniors and seniors spend part of their week in a classroom with a cooperating teacher, learning the job from the inside.
+I run the {{program}}. Our juniors and seniors spend part of their week in a classroom with a partnering teacher, learning the job from the inside.
 
 I would like to tell you about the program and see whether {{school}} might host a student or two this year. Interns are supervised, insured through the district, and observed by me on a regular schedule.
 
@@ -3219,7 +3219,7 @@ b:`Dear {{schoolContact}},
 
 I am building internship placements for the {{program}} and hoping {{school}} can host.
 
-What an intern needs: a cooperating teacher willing to have a high school student in the room two mornings a week, roughly two hours per visit, from {{termStart}} through {{termEnd}}. I handle scheduling, transportation logistics, observations and all paperwork.
+What an intern needs: a partnering teacher willing to have a high school student in the room two mornings a week, roughly two hours per visit, from {{termStart}} through {{termEnd}}. I handle scheduling, transportation logistics, observations and all paperwork.
 
 If you have teachers who would be a good fit, send me their names and I will reach out directly.{{signature}}`},
 
@@ -3230,7 +3230,7 @@ Thank you for agreeing to host {{student}} this term. Here are the details now o
 
 Student: {{student}} (grade {{grade}})
 School: {{school}}
-Cooperating teacher: {{teacher}} — {{teacherGrade}} {{teacherContent}}
+Partnering teacher: {{teacher}} — {{teacherGrade}} {{teacherContent}}
 Days: {{days}}
 Time: {{times}}
 Dates: {{dates}}
@@ -3257,13 +3257,13 @@ b:`{{first}},
 Your placement is set.
 
 School: {{school}}
-Cooperating teacher: {{teacher}} ({{teacherGrade}} {{teacherContent}})
+Partnering teacher: {{teacher}} ({{teacherGrade}} {{teacherContent}})
 Days: {{days}}
 Time: {{times}}
 Dates: {{dates}}
 Hours required: {{required}}
 
-Sign in at the front office every visit and sign out when you leave — that signature is how your hours get verified. Dress the way your cooperating teacher dresses. If you are going to be absent, tell me and your cooperating teacher before the school day starts, not after.{{signature}}`},
+Sign in at the front office every visit and sign out when you leave — that signature is how your hours get verified. Dress the way your partnering teacher dresses. If you are going to be absent, tell me and your partnering teacher before the school day starts, not after.{{signature}}`},
 
 "Reminder":{s:"Reminder — internship this week",
 b:`{{first}},
@@ -3286,7 +3286,7 @@ I am writing about {{first}}'s internship attendance at {{school}}.
 
 As of today {{first}} has {{absences}} absences from the placement and is at {{attendance}}% attendance, with {{completed}} of {{required}} required hours logged.
 
-A cooperating teacher plans around an intern being there. Missing days costs {{first}} hours and costs {{teacher}} the help that was planned for.
+A partnering teacher plans around an intern being there. Missing days costs {{first}} hours and costs {{teacher}} the help that was planned for.
 
 Can we talk this week about what is getting in the way?{{signature}}`},
 
@@ -3363,7 +3363,7 @@ function composeEmail(ctx){
   openModal({title:"Write an email", wide:true,
     body:`<div class="fgrid">
       <div><label class="f">Send to</label><select class="in" id="em_kind" onchange="emailKindChanged()">${selectOpts(
-        [{v:"teacher",l:"Cooperating teacher"},{v:"school",l:"School administrator"},{v:"student",l:"Student"},
+        [{v:"teacher",l:"Partnering teacher"},{v:"school",l:"School administrator"},{v:"student",l:"Student"},
          {v:"parent",l:"Parent / guardian"}], kind)}</select></div>
       <div><label class="f">Email type</label><select class="in" id="em_type" onchange="emailRegen()">${selectOpts(emailTypes(),type)}</select></div>
       <div class="full" style="display:flex;gap:8px;align-items:center">
@@ -3647,7 +3647,7 @@ const REPORTS = {
           obsDone(s.id), o.filter(x=>x.status==="Scheduled").length, obsOverdue(s.id)?"yes":"no",
           last?last.date:"—"]; })};
   }},
-  teachers:{name:"Cooperating teacher participation", build(f){
+  teachers:{name:"Partnering teacher participation", build(f){
     return {cols:["Teacher","School","Grade","Content","Interns hosted","Capacity","Hours supervised"],
       rows: teachers().map(t => { const pl = placements().filter(p => p.teacherId===t.id && p.status!=="Declined");
         return [t.name, schName(t.schoolId), t.gradeLevel, t.contentArea, pl.length, t.maxInterns,
@@ -3803,7 +3803,7 @@ function printObsForm(id){
     <div class="meta">${esc(prog().name)}</div>
     <dl><dt>Student</dt><dd>${esc(stuName(o.studentId))}</dd>
       <dt>School</dt><dd>${esc(schName(p.schoolId))}</dd>
-      <dt>Cooperating teacher</dt><dd>${esc(tchName(p.teacherId))}</dd>
+      <dt>Partnering teacher</dt><dd>${esc(tchName(p.teacherId))}</dd>
       <dt>Date and time</dt><dd>${fmtDateFull(o.date)} · ${esc(fmtTime(o.time))}</dd>
       <dt>Grade / content</dt><dd>Grade ${esc((tch(p.teacherId)||{}).gradeLevel||"")} · ${esc((tch(p.teacherId)||{}).contentArea||"")}</dd></dl>
     <h2>Ratings</h2>
@@ -3954,7 +3954,7 @@ Guardian phone: {{guardianPhone}}
 
 School: {{school}}
 Address: {{schoolAddress}}
-Cooperating teacher: {{teacher}}
+Partnering teacher: {{teacher}}
 Teacher email: {{teacherEmail}}
 Grade and content: {{teacherGrade}} · {{teacherContent}}
 Days and times: {{days}} · {{times}}
@@ -3983,14 +3983,14 @@ Attendance: {{attendance}}% · {{absences}} absences
 [[table: communications]]`},
 
 {id:"bi_agreement", name:"Student internship agreement", scope:"student",
- desc:"Signature page for student, guardian, cooperating teacher and facilitator",
+ desc:"Signature page for student, guardian, partnering teacher and facilitator",
  body:`## Placement
 
 Student: {{student}}
 Grade: {{grade}}
 Student ID: {{studentId}}
 School placement: {{school}}
-Cooperating teacher: {{teacher}}
+Partnering teacher: {{teacher}}
 Days and times: {{days}} · {{times}}
 Dates: {{dates}}
 Required hours: {{required}}
@@ -4000,7 +4000,7 @@ Guardian: {{guardian}} · {{guardianPhone}}
 
 ## The student agrees to
 
-Arrive on time on every scheduled day and sign in at the front office. Notify the facilitator and the cooperating teacher before the school day begins in the event of an absence. Dress and speak as a member of the school staff. Keep everything learned about students confidential. Complete the required {{required}} hours and a written reflection for each visit.
+Arrive on time on every scheduled day and sign in at the front office. Notify the facilitator and the partnering teacher before the school day begins in the event of an absence. Dress and speak as a member of the school staff. Keep everything learned about students confidential. Complete the required {{required}} hours and a written reflection for each visit.
 
 ## The parent or guardian acknowledges
 
@@ -4008,7 +4008,7 @@ The internship takes place off the high school campus during the school day, and
 
 [[signatures: Student signature / date | Parent or guardian signature / date]]
 
-[[signatures: Cooperating teacher signature / date | Facilitator signature / date]]`},
+[[signatures: Partnering teacher signature / date | Facilitator signature / date]]`},
 
 {id:"bi_completion", name:"Internship completion verification", scope:"student",
  desc:"Hours, attendance and observation summary with signature lines",
@@ -4020,11 +4020,11 @@ Attendance: {{attendance}}%
 Observations completed: {{obsCount}} of {{requiredObs}}
 Evaluation on file: {{evalOnFile}}
 
-[[signatures: Facilitator signature / date | Cooperating teacher signature / date]]`},
+[[signatures: Facilitator signature / date | Partnering teacher signature / date]]`},
 
-{id:"bi_teacher", name:"Cooperating teacher information sheet", scope:"teacher",
+{id:"bi_teacher", name:"Partnering teacher information sheet", scope:"teacher",
  desc:"What we ask of the teacher, plus their assigned interns",
- body:`## Cooperating teacher
+ body:`## Partnering teacher
 
 Teacher: {{teacher}}
 School: {{school}}
@@ -4060,7 +4060,7 @@ Administrators: {{schoolAdmins}}
 Travel from campus: {{schoolDistance}}
 Capacity: {{schoolFilled}} filled · {{schoolOpen}} open
 
-## Cooperating teachers
+## Partnering teachers
 
 [[table: teachers]]
 
@@ -4074,7 +4074,7 @@ const FORM_STARTER =
 Student: {{student}}
 Grade: {{grade}}
 School: {{school}}
-Cooperating teacher: {{teacher}}
+Partnering teacher: {{teacher}}
 Days and times: {{days}} · {{times}}
 Required hours: {{required}}
 
@@ -4103,7 +4103,7 @@ const FORM_BLOCKS = [
   ["table: evaluation","End-of-internship ratings and comments"],
   ["table: communications","Every message sent about this student"],
   ["table: interns","Interns assigned to this teacher or school"],
-  ["table: teachers","Cooperating teachers at this school"],
+  ["table: teachers","Partnering teachers at this school"],
   ["table: rubric","Blank rubric with a rating column to fill in by hand"],
   ["lines: 4","Blank writing lines"],
   ["box","A bordered box around the text that follows"],
@@ -4376,7 +4376,7 @@ function editForm(id){
         <div class="full"><label class="f">What it is for</label><input class="in" id="fm_desc" value="${attr(f.desc||"")}"></div>
         ${builtin?"":`<div class="full"><label class="f">Generated for</label>
           <select class="in" id="fm_scope">${selectOpts(
-            [{v:"student",l:"One per student"},{v:"teacher",l:"One per cooperating teacher"},{v:"school",l:"One per school"}], f.scope)}</select></div>`}
+            [{v:"student",l:"One per student"},{v:"teacher",l:"One per partnering teacher"},{v:"school",l:"One per school"}], f.scope)}</select></div>`}
       </div>
       <label class="f" style="margin-top:10px">Body</label>
       <textarea class="in" id="fm_body" style="min-height:320px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px"
