@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Practicum — Teacher Academy Field Placements</title>
+<title>Academy Internship — Teacher Academy Field Placements</title>
 <style>
 :root{
   --paper:#F5F6F2; --card:#FFFFFF; --ink:#18212B; --ink2:#4B5766; --ink3:#7C8796;
@@ -297,7 +297,7 @@ textarea.in{min-height:78px;resize:vertical;line-height:1.5}
 <body>
 <div id="app">
   <nav class="side" id="side">
-    <div class="brand"><b>Practicum</b><span>Teacher Academy field placements</span></div>
+    <div class="brand"><b>Academy Internship</b><span>Teacher Academy field placements</span></div>
     <div class="progswitch"><select id="progSel" onchange="switchProgram(this.value)"></select></div>
     <div class="navlist" id="navlist"></div>
     <div class="navfoot" id="navfoot"></div>
@@ -322,7 +322,7 @@ textarea.in{min-height:78px;resize:vertical;line-height:1.5}
 <iframe id="printFrame" style="position:fixed;width:0;height:0;border:0;left:-9999px"></iframe>
 <script>
 /* =========================================================================
-   Practicum — Teacher Academy internship placement & management
+   Academy Internship — Teacher Academy internship placement & management
    Single file. No dependencies. Data lives in localStorage (+ window.storage
    when the host provides it). Everything below is plain ES2017.
    ========================================================================= */
@@ -1609,7 +1609,7 @@ function studentComms(s){
       list.map(c => ({__:{d:c.date,t:c.type,r:commRecipientLabel(c),s:c.subject,st:c.status},
         click:`openComm('${c.id}')`,
         cells:[fmtDate(c.date), esc(c.type), esc(commRecipientLabel(c)), esc(c.subject), statusTag(c.status)]})),
-      `<b>No messages yet</b><p>Everything you send from Practicum is logged here.</p>`)}`;
+      `<b>No messages yet</b><p>Everything you send from Academy Internship is logged here.</p>`)}`;
 }
 function studentEval(s,p){
   const ev = evaluations().find(e => e.studentId === s.id);
@@ -1881,7 +1881,7 @@ function loadSpreadsheetFile(file, onText){
 function importStudents(){
   openModal({title:"Import a student roster", wide:true,
     body:`<p style="margin-top:0;font-size:13px">Paste from a spreadsheet, or choose a CSV or Excel (.xlsx) file. The first row must be
-      a header. Practicum matches these column names, in any order, and ignores anything else:</p>
+      a header. Academy Internship matches these column names, in any order, and ignores anything else:</p>
       <p class="mono" style="background:#F7F9F4;padding:9px;border-radius:4px;border:1px solid var(--line)">
       first, last, student id, grade, grad year, email, preferred grade, content area, second content,
       career, transportation, transportation notes, required hours, parent, parent email, parent phone, notes</p>
@@ -2848,7 +2848,7 @@ function editEvent(id, date){
         <select class="in" id="e_school">${selectOpts(schools().map(s=>({v:s.id,l:s.name})), e.schoolId, "All schools")}</select></div>
       <div class="full"><label class="f">Notes</label><textarea class="in" id="e_notes">${esc(e.notes||"")}</textarea></div>
     </div>
-    <p class="hint">Holidays, no-school days and professional development days are skipped when Practicum builds internship sessions.</p>`,
+    <p class="hint">Holidays, no-school days and professional development days are skipped when Academy Internship builds internship sessions.</p>`,
     foot:`${id?`<button class="btn dang" onclick="deleteEvent('${id}')">Delete</button>`:""}
           <div class="fill"></div><button class="btn" onclick="closeModal()">Cancel</button>
           <button class="btn pri" id="evSave">Save event</button>`,
@@ -3867,7 +3867,7 @@ function editTemplate(type, fromComposer){
   openModal({title:"Email template — "+type, wide:true,
     body:`<p class="hint" style="margin-top:0">${custom ? "A template you created."
         : edited ? "You have edited this one. The original wording is still available to restore."
-        : "The wording that ships with Practicum. Change anything you like."}</p>
+        : "The wording that ships with Academy Internship. Change anything you like."}</p>
       <label class="f">Subject line</label>
       <input class="in" id="tpl_subj" value="${attr(t.s)}" onfocus="FIELD_TARGET='tpl_subj'">
       <label class="f" style="margin-top:10px">Message</label>
@@ -4471,7 +4471,7 @@ RENDER.settings = function(){
         <div style="margin-top:8px"><button class="btn pri" onclick="saveSettings()">Save settings</button></div>
       </div>
       <div class="card"><h3>Email templates</h3>
-        <p class="sub">The wording Practicum suggests for each type of email. Edit any of them; the names and dates keep filling themselves in.</p>
+        <p class="sub">The wording Academy Internship suggests for each type of email. Edit any of them; the names and dates keep filling themselves in.</p>
         <div class="list">${emailTypes().filter(t=>t!=="Custom").map(t => `<div class="row">
           <div class="gr"><div class="ttl">${esc(t)}</div>
             <div class="mt">${esc((templateFor(t).s || "No subject line yet").slice(0,72))}</div></div>
@@ -4505,7 +4505,7 @@ RENDER.settings = function(){
         <div style="margin-top:10px"><button class="btn" onclick="addProgram()">Add a program</button></div>
       </div>
       <div class="card"><h3>Backup and restore</h3>
-        <p class="sub">Practicum stores everything in this browser. Export a backup regularly, or to move the program to another machine.</p>
+        <p class="sub">Academy Internship stores everything in this browser. Export a backup regularly, or to move the program to another machine.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" onclick="backup()">Download a backup</button>
           <button class="btn" onclick="document.getElementById('restoreFile').click()">Restore from a backup</button>
@@ -4574,9 +4574,9 @@ function restore(input){
   const r = new FileReader();
   r.onload = () => {
     let data;
-    try { data = JSON.parse(r.result); } catch(e){ return toast("That file is not a Practicum backup.", true); }
+    try { data = JSON.parse(r.result); } catch(e){ return toast("That file is not an Academy Internship backup.", true); }
     if(!data || !data.programs || !data.students) return toast("That file is missing program data.", true);
-    confirmAction("Restore this backup?", "It replaces everything currently in Practicum — "+
+    confirmAction("Restore this backup?", "It replaces everything currently in Academy Internship — "+
       data.students.length+" students and "+data.programs.length+" program(s) will take its place.", () => {
       DB = data;
       if(!DB.dismissed) DB.dismissed = [];
@@ -4624,7 +4624,7 @@ function startEmpty(){
     };}});
 }
 function resetAll(){
-  confirmAction("Reset Practicum to the sample program?",
+  confirmAction("Reset Academy Internship to the sample program?",
     "Everything you have entered in this browser is replaced by the demonstration data.", () => {
     DB = seedActivity(seed()); saveDB(); go("dashboard"); toast("Reset to sample data.");
   }, "Reset");
