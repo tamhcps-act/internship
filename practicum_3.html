@@ -546,7 +546,7 @@ function seed(){
     ],
     settings:{
       requiredHours:60, requiredObs:2, obsGraceDays:14, absenceAlert:3,
-      termStart:"2026-08-31", termEnd:"2026-12-11", defaultStart:"09:00", defaultEnd:"11:00", templates:{}, formOverrides:{}
+      termStart:"2026-10-14", termEnd:"2027-04-30", defaultStart:"09:00", defaultEnd:"11:00", templates:{}, formOverrides:{}
     },
     students:[], schools:[], teachers:[], placements:[], sessions:[],
     observations:[], comms:[], tasks:[], events:[], evaluations:[], forms:[], dismissed:[]
@@ -669,20 +669,74 @@ function seedActivity(db){
   const E = (date,type,title,notes,schoolId) =>
     ({id:uid("ev"),programId:PID,date,endDate:null,type,title,notes:notes||"",schoolId:schoolId||null});
   db.events = [
+    // ---- official HCPS 2026–2027 school calendar (no school / PD / holidays) ----
     E("2026-09-07","holiday","Labor Day — schools closed"),
-    E("2026-09-24","meeting","Teacher Academy advisory meeting","3:00 PM, media center"),
-    E("2026-10-09","pd","County professional development day","No students in buildings"),
-    E("2026-10-15","unavail","Facilitator at MACTE conference"),
-    E("2026-10-16","unavail","Facilitator at MACTE conference"),
-    E("2026-10-30","early","Early dismissal — 12:15 PM"),
-    E("2026-11-03","noschool","Election day — schools closed"),
+    E("2026-09-21","pd","No school — Teacher Professional Development"),
+    E("2026-10-16","pd","No school — Teacher Professional Development"),
+    E("2026-11-02","pd","No school — Teacher Professional Development"),
+    E("2026-11-03","noschool","Election Day — schools closed"),
     E("2026-11-11","holiday","Veterans Day — schools closed"),
-    E("2026-11-25","holiday","Thanksgiving break"),
     E("2026-11-26","holiday","Thanksgiving break"),
     E("2026-11-27","holiday","Thanksgiving break"),
-    E("2026-10-02","deadline","Cooperating teacher mid-point evaluations open"),
-    E("2026-12-04","deadline","All internship hours must be logged"),
-    E("2026-12-11","deadline","Final evaluations due from cooperating teachers"),
+    E("2026-12-23","pd","No school — Teacher Professional Development"),
+    E("2026-12-24","noschool","Winter break — schools closed"),
+    E("2026-12-25","holiday","Christmas Day — schools closed"),
+    E("2026-12-28","noschool","Winter break — schools closed"),
+    E("2026-12-29","noschool","Winter break — schools closed"),
+    E("2026-12-30","noschool","Winter break — schools closed"),
+    E("2026-12-31","noschool","Winter break — schools closed"),
+    E("2027-01-01","holiday","New Year's Day — schools closed"),
+    E("2027-01-18","holiday","No school — MLK Jr. Day"),
+    E("2027-02-15","holiday","No school — Presidents Day"),
+    E("2027-03-22","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-23","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-24","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-25","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-26","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-29","noschool","HCPS Spring Break — schools closed"),
+    E("2027-04-09","pd","No school — Teacher Professional Development"),
+    E("2027-05-31","holiday","Memorial Day — schools closed"),
+
+    // ---- early dismissals (3-hour ED) ----
+    E("2026-10-15","early","3 Hour ED — early dismissal"),
+    E("2026-10-30","early","3 Hour ED — early dismissal"),
+    E("2026-11-25","early","3 Hour ED — early dismissal"),
+    E("2027-01-29","early","3 Hour ED — early dismissal"),
+    E("2027-02-26","early","3 Hour ED — early dismissal"),
+    E("2027-04-08","early","3 Hour ED — early dismissal"),
+
+    // ---- inclement-weather contingency days on the printed calendar ----
+    E("2027-03-01","meeting","Inclement Weather Day (contingency)"),
+    E("2027-04-12","meeting","Inclement Weather Day (contingency)"),
+
+    // ---- quarters ----
+    E("2026-11-05","deadline","End of Quarter 1"),
+    E("2027-01-28","deadline","End of Quarter 2"),
+    E("2027-04-08","deadline","End of Quarter 3"),
+
+    // ---- Teacher Academy internship window ----
+    E("2026-10-14","deadline","First internship visit"),
+    E("2027-04-30","deadline","Internship — last day"),
+
+    // ---- HCC partner-college milestones ----
+    E("2026-11-22","meeting","HCC Fall Break"),
+    E("2026-12-11","meeting","HCC — end of fall semester"),
+    E("2026-12-20","meeting","HCC — winter classes start"),
+    E("2027-01-24","meeting","HCC — spring classes start"),
+    E("2027-03-28","meeting","HCC — PE230 begins"),
+    E("2027-05-15","meeting","HCC — end of spring semester"),
+    E("2027-05-19","meeting","TAM Graduate Celebration Event"),
+    E("2027-05-20","meeting","HCC Graduation"),
+    E("2027-05-21","meeting","HTHS Graduation"),
+    E("2027-05-26","meeting","EDHS Graduation"),
+
+    // ---- Teacher Academy program-specific items ----
+    E("2026-09-24","meeting","Teacher Academy advisory meeting","3:00 PM, media center"),
+    E("2026-10-15","unavail","Facilitator at MACTE conference"),
+    E("2026-10-16","unavail","Facilitator at MACTE conference"),
+    E("2027-01-15","deadline","Cooperating teacher mid-point evaluations open"),
+    E("2027-04-23","deadline","All internship hours must be logged"),
+    E("2027-05-05","deadline","Final evaluations due from cooperating teachers"),
     E("2026-09-30","meeting","Placement check-in with Meadowvale front office","With Angela Ruiz","sch_mead")
   ];
   const closed = new Set(db.events.filter(e => ["holiday","noschool","pd"].includes(e.type)).map(e => e.date));
@@ -690,29 +744,29 @@ function seedActivity(db){
   /* --- placements ------------------------------------------------------ */
   const rows = [
     // student, teacher, school, days, start, end, status, time
-    ["s01","t_amari","sch_mead",["Tue","Thu"],"2026-08-31","2026-12-11","Active","09:00","11:00"],
-    ["s02","t_okoro","sch_swan",["Tue","Thu"],"2026-08-31","2026-12-11","Active","09:15","11:15"],
-    ["s03","t_ferro","sch_bay", ["Mon","Wed"],"2026-08-31","2026-12-11","Active","09:00","11:00"],
-    ["s04","t_keil","sch_hdg",  ["Mon","Thu"],"2026-08-31","2026-12-11","Active","12:30","14:30"],
-    ["s05","t_brady","sch_bay", ["Tue","Thu"],"2026-08-31","2026-12-11","Active","09:00","11:00"],
-    ["s06","t_doyle","sch_mead",["Mon","Wed"],"2026-09-08","2026-12-11","Active","09:00","11:30"],
-    ["s07","t_hall","sch_mead", ["Tue","Thu"],"2026-09-08","2026-12-11","Active","09:00","11:30"],
-    ["s08","t_marsh","sch_swan",["Mon","Thu"],"2026-08-31","2026-12-11","Active","09:15","11:45"],
-    ["s09","t_ward","sch_hdg",  ["Tue","Thu"],"2026-09-08","2026-12-11","Active","10:00","12:30"],
-    ["s10","t_ali","sch_swan",  ["Wed","Fri"],"2026-09-08","2026-12-11","Active","13:30","16:00"],
-    ["s11","t_amari","sch_mead",["Wed"],       "2026-09-08","2026-12-11","Active","09:00","12:00"],
-    ["s12","t_veras","sch_north",["Mon","Wed"],"2026-09-08","2026-12-11","Active","09:00","11:30"],
-    ["s13","t_sohn","sch_mead", ["Mon","Thu"],"2026-09-08","2026-12-11","Active","09:00","11:30"],
-    ["s14","t_boone","sch_hdg", ["Mon","Wed"],"2026-09-08","2026-12-11","Active","12:30","15:00"],
-    ["s15","t_park","sch_bester",["Tue","Thu"],"2026-09-08","2026-12-11","Active","09:00","11:30"],
-    ["s16","t_ward","sch_hdg",  ["Tue","Thu"],"2026-09-08","2026-12-11","Active","12:30","15:00"],
-    ["s27","t_ngo","sch_bester",["Wed","Fri"],"2026-09-08","2026-12-11","Active","09:00","11:30"],
-    ["s17","t_hall","sch_mead", ["Tue","Thu"],"2026-09-22","2026-12-11","Requested","09:00","11:30"],
-    ["s18","t_cole","sch_north",["Tue","Thu"],"2026-09-22","2026-12-11","Requested","09:00","11:30"],
-    ["s19","t_ives","sch_bester",["Mon","Wed"],"2026-09-29","2026-12-11","Proposed","09:00","11:00"],
+    ["s01","t_amari","sch_mead",["Tue","Thu"],"2026-10-14","2027-04-30","Active","09:00","11:00"],
+    ["s02","t_okoro","sch_swan",["Tue","Thu"],"2026-10-14","2027-04-30","Active","09:15","11:15"],
+    ["s03","t_ferro","sch_bay", ["Mon","Wed"],"2026-10-14","2027-04-30","Active","09:00","11:00"],
+    ["s04","t_keil","sch_hdg",  ["Mon","Thu"],"2026-10-14","2027-04-30","Active","12:30","14:30"],
+    ["s05","t_brady","sch_bay", ["Tue","Thu"],"2026-10-14","2027-04-30","Active","09:00","11:00"],
+    ["s06","t_doyle","sch_mead",["Mon","Wed"],"2026-10-14","2027-04-30","Active","09:00","11:30"],
+    ["s07","t_hall","sch_mead", ["Tue","Thu"],"2026-10-14","2027-04-30","Active","09:00","11:30"],
+    ["s08","t_marsh","sch_swan",["Mon","Thu"],"2026-10-14","2027-04-30","Active","09:15","11:45"],
+    ["s09","t_ward","sch_hdg",  ["Tue","Thu"],"2026-10-14","2027-04-30","Active","10:00","12:30"],
+    ["s10","t_ali","sch_swan",  ["Wed","Fri"],"2026-10-14","2027-04-30","Active","13:30","16:00"],
+    ["s11","t_amari","sch_mead",["Wed"],       "2026-10-14","2027-04-30","Active","09:00","12:00"],
+    ["s12","t_veras","sch_north",["Mon","Wed"],"2026-10-14","2027-04-30","Active","09:00","11:30"],
+    ["s13","t_sohn","sch_mead", ["Mon","Thu"],"2026-10-14","2027-04-30","Active","09:00","11:30"],
+    ["s14","t_boone","sch_hdg", ["Mon","Wed"],"2026-10-14","2027-04-30","Active","12:30","15:00"],
+    ["s15","t_park","sch_bester",["Tue","Thu"],"2026-10-14","2027-04-30","Active","09:00","11:30"],
+    ["s16","t_ward","sch_hdg",  ["Tue","Thu"],"2026-10-14","2027-04-30","Active","12:30","15:00"],
+    ["s27","t_ngo","sch_bester",["Wed","Fri"],"2026-10-14","2027-04-30","Active","09:00","11:30"],
+    ["s17","t_hall","sch_mead", ["Tue","Thu"],"2026-10-20","2027-04-30","Requested","09:00","11:30"],
+    ["s18","t_cole","sch_north",["Tue","Thu"],"2026-10-20","2027-04-30","Requested","09:00","11:30"],
+    ["s19","t_ives","sch_bester",["Mon","Wed"],"2026-10-26","2027-04-30","Proposed","09:00","11:00"],
     ["s25","t_grant","sch_bay", ["Tue","Thu"],"2026-02-03","2026-05-14","Completed","09:00","11:00"],
     ["s26","t_lang","sch_swan", ["Mon","Wed"],"2026-02-02","2026-05-13","Completed","09:15","11:15"],
-    ["s28","t_lang","sch_swan", ["Tue","Thu"],"2026-09-08","2026-12-11","Declined","09:15","11:15"]
+    ["s28","t_lang","sch_swan", ["Tue","Thu"],"2026-10-14","2027-04-30","Declined","09:15","11:15"]
   ];
   rows.forEach(r => {
     const [sid,tid,schid,days,start,end,status,st,et] = r;
@@ -721,18 +775,18 @@ function seedActivity(db){
       days, startDate:start, endDate:end, startTime:st, endTime:et, status,
       requestedOn: status==="Proposed" ? null : addDays(start,-14),
       confirmedOn: ["Active","Completed"].includes(status) ? addDays(start,-7) : null,
-      notes: status==="Declined" ? "Student withdrew from the program on 2026-09-18." : "",
+      notes: status==="Declined" ? "Student withdrew from the program on 2026-10-05." : "",
       createdAt: addDays(start,-21),
       history:[{date:addDays(start,-21),note:"Placement created"}]
     };
     if(status!=="Proposed") p.history.push({date:addDays(start,-14),note:"Placement requested from cooperating teacher"});
     if(p.confirmedOn) p.history.push({date:p.confirmedOn,note:"Confirmed by cooperating teacher"});
-    if(status==="Declined") p.history.push({date:"2026-09-18",note:"Closed — student withdrew from the program"});
+    if(status==="Declined") p.history.push({date:"2026-10-05",note:"Closed — student withdrew from the program"});
     db.placements.push(p);
   });
 
   /* --- sessions generated from each active/completed placement --------- */
-  const TODAY = "2026-09-18";
+  const TODAY = "2027-01-20";
   const troubled = {s08:1, s12:1, s10:1};                 // students with attendance problems
   db.placements.filter(p => ["Active","Completed"].includes(p.status)).forEach(p => {
     let d = p.startDate, guard = 0;
@@ -789,22 +843,22 @@ function seedActivity(db){
     notes:"", strengths:"", growth:"", followUp:false, rubric:{}
   }, extra||{});
   db.observations = [
-    O("s01","2026-09-10","09:15","Completed",{
+    O("s01","2026-10-27","09:15","Completed",{
       notes:"Maya ran a guided reading table for 20 minutes with four students.",
       strengths:"Warm, steady presence. Uses student names constantly. Redirects without raising her voice.",
       growth:"Let students sit in silence longer before supplying the answer.", followUp:false}),
-    O("s02","2026-09-15","09:30","Completed",{
+    O("s02","2026-11-04","09:30","Completed",{
       notes:"Observed during a 7th grade ratio lesson; Devin circulated and checked work.",
       strengths:"Strong content knowledge, patient with repeated questions.",
       growth:"Needs to ask a question back instead of re-explaining.", followUp:false}),
-    O("s03","2026-09-16","09:15","Completed",{
+    O("s03","2026-11-10","09:15","Completed",{
       notes:"Science lab setup and small-group support in 5th grade.",
       strengths:"Anticipates what the teacher needs next.",
       growth:"Speak up in front of the whole class — she defaults to the back of the room.", followUp:true}),
-    O("s04","2026-09-24","12:45","Scheduled"),
-    O("s05","2026-09-29","09:15","Scheduled"),
-    O("s06","2026-09-23","09:15","Scheduled"),
-    O("s09","2026-09-17","10:15","Completed",{
+    O("s04","2027-01-27","12:45","Scheduled"),
+    O("s05","2027-02-02","09:15","Scheduled"),
+    O("s06","2027-01-26","09:15","Scheduled"),
+    O("s09","2026-11-17","10:15","Completed",{
       notes:"9th grade ELA, independent writing block.",
       strengths:"Excellent one-on-one conferencing voice.",
       growth:"Keep an eye on the whole room while conferencing.", followUp:false}),
@@ -823,16 +877,16 @@ function seedActivity(db){
     body:"", status, followUp:null, studentId:null, schoolId:null, teacherId:null
   }, extra||{});
   db.comms = [
-    C("2026-08-12","Request for placements","school",["sch_mead"],"Teacher Academy placements for fall 2026","Closed",{schoolId:"sch_mead"}),
-    C("2026-08-12","Request for placements","school",["sch_bay"],"Teacher Academy placements for fall 2026","Closed",{schoolId:"sch_bay"}),
-    C("2026-08-12","Request for placements","school",["sch_swan"],"Teacher Academy placements for fall 2026","Closed",{schoolId:"sch_swan"}),
-    C("2026-08-12","Request for placements","school",["sch_bester"],"Teacher Academy placements for fall 2026","Awaiting reply",{schoolId:"sch_bester",followUp:"2026-09-17"}),
-    C("2026-08-12","Request for placements","school",["sch_north"],"Teacher Academy placements for fall 2026","Awaiting reply",{schoolId:"sch_north",followUp:"2026-09-22"}),
+    C("2026-08-12","Request for placements","school",["sch_mead"],"Teacher Academy placements for 2026–2027","Closed",{schoolId:"sch_mead"}),
+    C("2026-08-12","Request for placements","school",["sch_bay"],"Teacher Academy placements for 2026–2027","Closed",{schoolId:"sch_bay"}),
+    C("2026-08-12","Request for placements","school",["sch_swan"],"Teacher Academy placements for 2026–2027","Closed",{schoolId:"sch_swan"}),
+    C("2026-08-12","Request for placements","school",["sch_bester"],"Teacher Academy placements for 2026–2027","Awaiting reply",{schoolId:"sch_bester",followUp:"2026-09-17"}),
+    C("2026-08-12","Request for placements","school",["sch_north"],"Teacher Academy placements for 2026–2027","Awaiting reply",{schoolId:"sch_north",followUp:"2026-09-22"}),
     C("2026-08-25","Placement confirmation","teacher",["t_amari"],"Confirmed: Maya Alvarez, Tuesdays and Thursdays","Sent",{teacherId:"t_amari",studentId:"s01"}),
     C("2026-08-25","Student introduction","teacher",["t_okoro"],"Introducing your intern, Devin Brooks","Sent",{teacherId:"t_okoro",studentId:"s02"}),
-    C("2026-09-09","Attendance concern","student",["s08"],"Missed internship days — Marcus Webb","Awaiting reply",{studentId:"s08",followUp:"2026-09-18"}),
-    C("2026-09-14","Observation notification","teacher",["t_ferro"],"Observation visit on September 16","Sent",{teacherId:"t_ferro",studentId:"s03"}),
-    C("2026-09-08","Request for placements","teacher",["t_hall"],"Can you take a second intern this fall?","Awaiting reply",{teacherId:"t_hall",studentId:"s17",followUp:"2026-09-18"}),
+    C("2026-11-10","Attendance concern","student",["s08"],"Missed internship days — Marcus Webb","Awaiting reply",{studentId:"s08",followUp:"2026-11-17"}),
+    C("2026-11-05","Observation notification","teacher",["t_ferro"],"Observation visit on November 10","Sent",{teacherId:"t_ferro",studentId:"s03"}),
+    C("2026-09-08","Request for placements","teacher",["t_hall"],"Can you take a second intern this year?","Awaiting reply",{teacherId:"t_hall",studentId:"s17",followUp:"2026-09-18"}),
     C("2026-09-08","Request for placements","teacher",["t_cole"],"Placement request for Jack Mercer","Awaiting reply",{teacherId:"t_cole",studentId:"s18",followUp:"2026-09-21"})
   ];
 
@@ -4585,7 +4639,7 @@ function resetAll(){
   DB.dismissed = DB.dismissed || [];
   DB.forms = DB.forms || [];
   DB.settings = Object.assign({requiredHours:60,requiredObs:2,obsGraceDays:14,absenceAlert:3,
-    termStart:"2026-08-31",termEnd:"2026-12-11",defaultStart:"09:00",defaultEnd:"11:00"}, DB.settings||{});
+    termStart:"2026-10-14",termEnd:"2027-04-30",defaultStart:"09:00",defaultEnd:"11:00"}, DB.settings||{});
   DB.settings.templates = DB.settings.templates || {};
   if(!DB.programs.some(p => p.id === DB.activeProgramId)) DB.activeProgramId = DB.programs[0].id;
   UI.calDate = today();
