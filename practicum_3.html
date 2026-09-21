@@ -4591,16 +4591,17 @@ function restore(input){
 }
 function startEmpty(){
   openModal({title:"Erase the sample data", narrow:true,
-    body:`<p style="margin:0 0 10px;font-size:14px">This clears everything the demonstration program came with and leaves you
-        one empty program to start entering your own students and schools.</p>
+    body:`<p style="margin:0 0 10px;font-size:14px">This clears the demonstration students, schools, teachers and placements and
+        leaves you one empty program to start entering your own. Your calendar stays as it is.</p>
       <label class="f">Name your program</label>
       <input class="in" id="se_name" value="${attr(prog().name)}">
       <div class="fgrid" style="margin-top:10px">
         <div><label class="f">Facilitator</label><input class="in" id="se_fac" value="${attr(prog().facilitator)}"></div>
         <div><label class="f">Email</label><input class="in" id="se_email" value="${attr(prog().email)}"></div>
       </div>
-      <p class="hint">Your email templates, your forms and your internship settings are kept. Download a backup first if you
-        want the sample program to be recoverable.</p>`,
+      <p class="hint">Your calendar events, email templates, forms and internship settings are kept — only the school-specific
+        tag on a calendar event is cleared, since the schools it pointed at are gone. Download a backup first if you want the
+        sample program to be recoverable.</p>`,
     foot:`<button class="btn" onclick="backup()">Download a backup first</button>
           <div class="fill"></div><button class="btn" onclick="closeModal()">Cancel</button>
           <button class="btn dang" id="seGo">Erase and start empty</button>`,
@@ -4610,15 +4611,16 @@ function startEmpty(){
       const keptTemplates = DB.settings.templates || {};
       const keptOverrides = DB.settings.formOverrides || {};
       const keptForms = (DB.forms || []).map(f => Object.assign({}, f, {programId:id}));
+      const keptEvents = (DB.events || []).map(e => Object.assign({}, e, {programId:id, schoolId:null}));
       DB = {
         version:1, updatedAt:new Date().toISOString(), activeProgramId:id,
         programs:[{id, name, facilitator:val("se_fac"), email:val("se_email"), phone:prog().phone||""}],
         settings:Object.assign({}, DB.settings, {templates:keptTemplates, formOverrides:keptOverrides}),
         students:[], schools:[], teachers:[], placements:[], sessions:[], observations:[],
-        comms:[], tasks:[], events:[], evaluations:[], forms:keptForms, dismissed:[]
+        comms:[], tasks:[], events:keptEvents, evaluations:[], forms:keptForms, dismissed:[]
       };
       saveDB(); closeAllModals(); go("students");
-      toast("Sample data erased. Import a roster or add your first school.");
+      toast("Sample students, schools, teachers and placements erased. Your calendar is untouched — import a roster or add your first school.");
     };}});
 }
 function resetAll(){
