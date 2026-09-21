@@ -669,17 +669,71 @@ function seedActivity(db){
   const E = (date,type,title,notes,schoolId) =>
     ({id:uid("ev"),programId:PID,date,endDate:null,type,title,notes:notes||"",schoolId:schoolId||null});
   db.events = [
+    // ---- official HCPS 2026–2027 school calendar (no school / PD / holidays) ----
     E("2026-09-07","holiday","Labor Day — schools closed"),
-    E("2026-09-24","meeting","Teacher Academy advisory meeting","3:00 PM, media center"),
-    E("2026-10-09","pd","County professional development day","No students in buildings"),
-    E("2026-10-15","unavail","Facilitator at MACTE conference"),
-    E("2026-10-16","unavail","Facilitator at MACTE conference"),
-    E("2026-10-30","early","Early dismissal — 12:15 PM"),
-    E("2026-11-03","noschool","Election day — schools closed"),
+    E("2026-09-21","pd","No school — Teacher Professional Development"),
+    E("2026-10-16","pd","No school — Teacher Professional Development"),
+    E("2026-11-02","pd","No school — Teacher Professional Development"),
+    E("2026-11-03","noschool","Election Day — schools closed"),
     E("2026-11-11","holiday","Veterans Day — schools closed"),
-    E("2026-11-25","holiday","Thanksgiving break"),
     E("2026-11-26","holiday","Thanksgiving break"),
     E("2026-11-27","holiday","Thanksgiving break"),
+    E("2026-12-23","pd","No school — Teacher Professional Development"),
+    E("2026-12-24","noschool","Winter break — schools closed"),
+    E("2026-12-25","holiday","Christmas Day — schools closed"),
+    E("2026-12-28","noschool","Winter break — schools closed"),
+    E("2026-12-29","noschool","Winter break — schools closed"),
+    E("2026-12-30","noschool","Winter break — schools closed"),
+    E("2026-12-31","noschool","Winter break — schools closed"),
+    E("2027-01-01","holiday","New Year's Day — schools closed"),
+    E("2027-01-18","holiday","No school — MLK Jr. Day"),
+    E("2027-02-15","holiday","No school — Presidents Day"),
+    E("2027-03-22","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-23","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-24","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-25","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-26","noschool","HCPS Spring Break — schools closed"),
+    E("2027-03-29","noschool","HCPS Spring Break — schools closed"),
+    E("2027-04-09","pd","No school — Teacher Professional Development"),
+    E("2027-05-31","holiday","Memorial Day — schools closed"),
+
+    // ---- early dismissals (3-hour ED) ----
+    E("2026-10-15","early","3 Hour ED — early dismissal"),
+    E("2026-10-30","early","3 Hour ED — early dismissal"),
+    E("2026-11-25","early","3 Hour ED — early dismissal"),
+    E("2027-01-29","early","3 Hour ED — early dismissal"),
+    E("2027-02-26","early","3 Hour ED — early dismissal"),
+    E("2027-04-08","early","3 Hour ED — early dismissal"),
+
+    // ---- inclement-weather contingency days on the printed calendar ----
+    E("2027-03-01","meeting","Inclement Weather Day (contingency)"),
+    E("2027-04-12","meeting","Inclement Weather Day (contingency)"),
+
+    // ---- quarters ----
+    E("2026-11-05","deadline","End of Quarter 1"),
+    E("2027-01-28","deadline","End of Quarter 2"),
+    E("2027-04-08","deadline","End of Quarter 3"),
+
+    // ---- Teacher Academy internship window ----
+    E("2026-10-14","deadline","First internship visit"),
+    E("2027-04-30","deadline","Internship — last day"),
+
+    // ---- HCC partner-college milestones ----
+    E("2026-11-22","meeting","HCC Fall Break"),
+    E("2026-12-11","meeting","HCC — end of fall semester"),
+    E("2026-12-20","meeting","HCC — winter classes start"),
+    E("2027-01-24","meeting","HCC — spring classes start"),
+    E("2027-03-28","meeting","HCC — PE230 begins"),
+    E("2027-05-15","meeting","HCC — end of spring semester"),
+    E("2027-05-19","meeting","TAM Graduate Celebration Event"),
+    E("2027-05-20","meeting","HCC Graduation"),
+    E("2027-05-21","meeting","HTHS Graduation"),
+    E("2027-05-26","meeting","EDHS Graduation"),
+
+    // ---- Teacher Academy program-specific items ----
+    E("2026-09-24","meeting","Teacher Academy advisory meeting","3:00 PM, media center"),
+    E("2026-10-15","unavail","Facilitator at MACTE conference"),
+    E("2026-10-16","unavail","Facilitator at MACTE conference"),
     E("2026-10-02","deadline","Cooperating teacher mid-point evaluations open"),
     E("2026-12-04","deadline","All internship hours must be logged"),
     E("2026-12-11","deadline","Final evaluations due from cooperating teachers"),
