@@ -346,6 +346,7 @@ const EVENT_TYPES = {
   noschool:{label:"No school",cls:"noschool",color:"var(--brick)"},
   early:{label:"Early dismissal",cls:"early",color:"var(--gold)"},
   pd:{label:"Professional development",cls:"pd",color:"var(--sage)"},
+  intern:{label:"Internship",cls:"intern",color:"var(--accent)"},
   unavail:{label:"Facilitator unavailable",cls:"meet",color:"#8A7A63"},
   meeting:{label:"Meeting",cls:"meet",color:"#8A7A63"},
   deadline:{label:"Deadline",cls:"dead",color:"#7C2F27"}
@@ -715,8 +716,8 @@ function seedActivity(db){
     E("2027-04-08","deadline","End of Quarter 3"),
 
     // ---- Teacher Academy internship window ----
-    E("2026-10-14","deadline","First internship visit"),
-    E("2027-04-30","deadline","Internship — last day"),
+    E("2026-10-14","intern","First internship visit"),
+    E("2027-04-30","intern","Internship — last day"),
 
     // ---- HCC partner-college milestones ----
     E("2026-11-22","meeting","HCC Fall Break"),
