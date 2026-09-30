@@ -3889,8 +3889,9 @@ function editTemplate(type, fromComposer){
         <div id="tpl_prev" style="white-space:pre-wrap;font-size:13px;line-height:1.6"></div></div>`,
     foot:`${custom ? `<button class="btn dang" onclick="deleteTemplate('${attr(type)}')">Delete template</button>`
           : edited ? `<button class="btn" onclick="restoreTemplate('${attr(type)}')">Restore original</button>` : ""}
-          <div class="fill"></div><button class="btn" onclick="closeModal()">Cancel</button>
-          <button class="btn pri" id="tplSave">Save template</button>`,
+          foot:`<button class="btn" onclick="openStyleEditor('${type}', () => render())">Customize colors & fonts</button>
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" id="tmplSave">Save</button>`,
     after(){
       const prev = () => {
         const s = students()[0];
@@ -4232,18 +4233,212 @@ function subjectsFor(scopeKind){
     : students().filter(s => s.status !== "Withdrawn").map(s => ({v:s.id, l:s.first+" "+s.last+" (grade "+s.grade+")"}));
 }
 /* ---- output: print, PDF via the print dialog, or an editable Word file -- */
-function generateDocs(formId, ids, mode){
+function generateDocs(formId, ids, mode, styleOverride){
   const form = formById(formId);
   if(!form) return toast("That form is gone.", true);
   if(!ids || !ids.length) return toast("Choose at least one person first.", true);
+  
+  // If this is a Word export and no style override yet, prompt for one
+  if(mode === "word" && !styleOverride) {
+    return openExportStyleOverride(formId, (override) => {
+      generateDocs(formId, ids, mode, override);
+    });
+  }
+  
   const inner = ids.map(id => renderFormFor(form, id)).join('<div class="pb"></div>');
   const title = form.name + (ids.length > 1 ? " — "+ids.length+" copies" : " — "+subjectLabel(form.scope, ids[0]));
-  if(mode === "word") wordDoc(slug(form.name)+"-"+today()+".doc", title, inner);
+  if(mode === "word") wordDoc(slug(form.name)+"-"+today()+".doc", title, inner, styleOverride);
   else printDoc(title, inner, mode === "pdf");
   if(ids.length > 1 && mode !== "word") toast(ids.length+" copies in one job, one per page.");
 }
 function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
-function wordDoc(filename, title, inner){
+/* =========================================================================
+   COLOR & FONT CUSTOMIZATION SYSTEM
+   ========================================================================= */
+
+// Default style presets
+const STYLE_PRESETS = {
+  "Professional Blue": {
+    headingColor: "#1F5C7A", headingFont: "Calibri", 
+    accentColor: "#1F5C7A", bodyFont: "Georgia", bodySize: 11
+  },
+  "Academic Gold": {
+    headingColor: "#B3801A", headingFont: "Calibri",
+    accentColor: "#B3801A", bodyFont: "Georgia", bodySize: 11
+  },
+  "Warm Brick": {
+    headingColor: "#A6453C", headingFont: "Calibri",
+    accentColor: "#A6453C", bodyFont: "Georgia", bodySize: 11
+  },
+  "Sage Green": {
+    headingColor: "#4F7A4A", headingFont: "Calibri",
+    accentColor: "#4F7A4A", bodyFont: "Georgia", bodySize: 11
+  }
+};
+
+// Get styling for a template (with fallback to defaults)
+function getTemplateStyle(templateType, override) {
+  const saved = (DB.settings.templates[templateType] || {}).style || {};
+  return Object.assign({
+    headingColor: "#1F5C7A",
+    headingFont: "Calibri",
+    accentColor: "#1F5C7A",
+    bodyFont: "Georgia",
+    bodySize: 11
+  }, saved, override);
+}
+
+// Save styling to a template
+function saveTemplateStyle(templateType, style) {
+  if (!DB.settings.templates[templateType]) {
+    DB.settings.templates[templateType] = { s: "", b: "" };
+  }
+  DB.settings.templates[templateType].style = style;
+  saveDB();
+}
+
+// Generate Word CSS from style object
+function styleToWordCSS(style) {
+  return `
+    h1{color:${style.headingColor};font-family:${style.headingFont},Arial,sans-serif}
+    h2{color:${style.headingColor};font-family:${style.headingFont},Arial,sans-serif;border-bottom-color:${style.accentColor}}
+    .accent{color:${style.accentColor}}
+    .heading{color:${style.headingColor}}
+    body{font-family:${style.bodyFont},"Times New Roman",serif;font-size:${style.bodySize}pt}
+  `;
+}
+
+// Open style customization modal
+function openStyleEditor(templateType, onSave) {
+  const style = getTemplateStyle(templateType);
+  const presetNames = Object.keys(STYLE_PRESETS);
+  
+  openModal({
+    title: `Style for "${templateType}"`,
+    narrow: true,
+    body: `
+      <div style="margin-bottom:14px">
+        <label class="f">Quick presets</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${presetNames.map(name => 
+            `<button class="btn sm" onclick="applyPreset('${name}','${templateType}')" style="font-size:11px">${name}</button>`
+          ).join("")}
+        </div>
+      </div>
+      
+      <div class="fgrid">
+        <div>
+          <label class="f">Heading color</label>
+          <input type="color" id="style_h_color" value="${style.headingColor}" style="width:100%;height:36px;border:1px solid var(--line2);cursor:pointer">
+        </div>
+        <div>
+          <label class="f">Heading font</label>
+          <select class="in" id="style_h_font">
+            <option value="Calibri" ${style.headingFont==="Calibri"?"selected":""}>Calibri</option>
+            <option value="Arial" ${style.headingFont==="Arial"?"selected":""}>Arial</option>
+            <option value="Georgia" ${style.headingFont==="Georgia"?"selected":""}>Georgia</option>
+            <option value="Times New Roman" ${style.headingFont==="Times New Roman"?"selected":""}>Times New Roman</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="f">Accent color</label>
+          <input type="color" id="style_a_color" value="${style.accentColor}" style="width:100%;height:36px;border:1px solid var(--line2);cursor:pointer">
+        </div>
+        <div>
+          <label class="f">Body font</label>
+          <select class="in" id="style_b_font">
+            <option value="Georgia" ${style.bodyFont==="Georgia"?"selected":""}>Georgia</option>
+            <option value="Calibri" ${style.bodyFont==="Calibri"?"selected":""}>Calibri</option>
+            <option value="Arial" ${style.bodyFont==="Arial"?"selected":""}>Arial</option>
+            <option value="Times New Roman" ${style.bodyFont==="Times New Roman"?"selected":""}>Times New Roman</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="f">Body font size</label>
+          <select class="in" id="style_b_size">
+            <option value="10" ${style.bodySize===10?"selected":""}>10pt</option>
+            <option value="11" ${style.bodySize===11?"selected":""}>11pt</option>
+            <option value="12" ${style.bodySize===12?"selected":""}>12pt</option>
+            <option value="13" ${style.bodySize===13?"selected":""}>13pt</option>
+          </select>
+        </div>
+      </div>
+    `,
+    foot: `
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" onclick="saveStyleFromModal('${templateType}')">Save style</button>
+    `,
+    after() {
+      window.saveStyleFromModal = (templateType) => {
+        const newStyle = {
+          headingColor: val("style_h_color"),
+          headingFont: val("style_h_font"),
+          accentColor: val("style_a_color"),
+          bodyFont: val("style_b_font"),
+          bodySize: +val("style_b_size")
+        };
+        saveTemplateStyle(templateType, newStyle);
+        closeModal();
+        if (onSave) onSave();
+        toast("Style saved.");
+      };
+      window.applyPreset = (presetName, templateType) => {
+        const preset = STYLE_PRESETS[presetName];
+        $("style_h_color").value = preset.headingColor;
+        $("style_h_font").value = preset.headingFont;
+        $("style_a_color").value = preset.accentColor;
+        $("style_b_font").value = preset.bodyFont;
+        $("style_b_size").value = preset.bodySize;
+      };
+    }
+  });
+}
+
+// Pre-export style override modal
+function openExportStyleOverride(templateType, onExport) {
+  const style = getTemplateStyle(templateType);
+  
+  openModal({
+    title: "Customize colors for this export",
+    narrow: true,
+    body: `
+      <p class="hint" style="margin-top:0;margin-bottom:12px">Override the template's default colors just for this export (template defaults stay unchanged).</p>
+      
+      <div class="fgrid">
+        <div>
+          <label class="f">Heading color</label>
+          <input type="color" id="exp_h_color" value="${style.headingColor}" style="width:100%;height:36px;border:1px solid var(--line2);cursor:pointer">
+        </div>
+        <div>
+          <label class="f">Accent color</label>
+          <input type="color" id="exp_a_color" value="${style.accentColor}" style="width:100%;height:36px;border:1px solid var(--line2);cursor:pointer">
+        </div>
+      </div>
+    `,
+    foot: `
+      <button class="btn" onclick="closeModal()">Use defaults</button>
+      <button class="btn pri" onclick="proceedWithStyleOverride()">Export with custom colors</button>
+    `,
+    after() {
+      window.proceedWithStyleOverride = () => {
+        const override = {
+          headingColor: val("exp_h_color"),
+          accentColor: val("exp_a_color")
+        };
+        closeModal();
+        onExport(override);
+      };
+    }
+  });
+}
+function wordDoc(filename, title, inner, styleOverride){
+  // Extract template type from the form being rendered (if available)
+  // For now, use a default style - we'll get fancier in Section 3
+  const style = styleOverride || getTemplateStyle("default");
+  const wordCSS = styleToWordCSS(style);
+  
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
     xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
     <head><meta charset="utf-8"><title>${esc(title)}</title>
@@ -4251,27 +4446,30 @@ function wordDoc(filename, title, inner){
     <style>
       @page WordSection1{size:8.5in 11.0in;margin:1.0in 1.0in 1.0in 1.0in}
       div.WordSection1{page:WordSection1}
-      body{font-family:Georgia,"Times New Roman",serif;font-size:11.5pt;line-height:1.45;color:#18212B}
-      h1{font-family:Calibri,Arial,sans-serif;font-size:18pt;margin:0 0 2pt}
-      h2{font-family:Calibri,Arial,sans-serif;font-size:12pt;margin:16pt 0 5pt;border-bottom:1px solid #999;padding-bottom:3pt}
-      .meta{font-family:Calibri,Arial,sans-serif;font-size:9.5pt;color:#555;margin-bottom:14pt}
-      table{width:100%;border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:9.5pt;margin:6pt 0}
-      th{text-align:left;border-bottom:1.5pt solid #333;padding:4pt 5pt}
+      body{font-family:${style.bodyFont},"Times New Roman",serif;font-size:${style.bodySize}pt;line-height:1.45;color:#18212B}
+      h1{font-family:${style.headingFont},Arial,sans-serif;font-size:18pt;margin:0 0 2pt;color:${style.headingColor}}
+      h2{font-family:${style.headingFont},Arial,sans-serif;font-size:12pt;margin:16pt 0 5pt;border-bottom:1px solid ${style.accentColor};padding-bottom:3pt;color:${style.headingColor}}
+      .meta{font-family:${style.headingFont},Arial,sans-serif;font-size:9.5pt;color:#555;margin-bottom:14pt}
+      table{width:100%;border-collapse:collapse;font-family:${style.headingFont},Arial,sans-serif;font-size:9.5pt;margin:6pt 0}
+      th{text-align:left;border-bottom:1.5pt solid ${style.accentColor};padding:4pt 5pt;color:${style.headingColor};font-weight:bold}
       td{border-bottom:.5pt solid #ccc;padding:4pt 5pt;vertical-align:top}
       dl{margin:6pt 0}
-      dt{font-family:Calibri,Arial,sans-serif;font-size:9.5pt;color:#555;float:left;width:150pt;clear:left}
+      dt{font-family:${style.headingFont},Arial,sans-serif;font-size:9.5pt;color:${style.headingColor};float:left;width:150pt;clear:left;font-weight:bold}
       dd{margin:0 0 3pt 155pt}
-      .box{border:1pt solid #999;padding:8pt;margin:8pt 0}
+      .box{border:1pt solid ${style.accentColor};padding:8pt;margin:8pt 0}
+      .accent{color:${style.accentColor}}
+      .heading{color:${style.headingColor}}
       .sig{margin-top:22pt}
-      .sig div{border-top:1pt solid #333;padding-top:4pt;font-family:Calibri,Arial,sans-serif;font-size:9pt;width:45%;display:inline-block;margin-right:4%}
+      .sig div{border-top:1pt solid ${style.headingColor};padding-top:4pt;font-family:${style.headingFont},Arial,sans-serif;font-size:9pt;width:45%;display:inline-block;margin-right:4%}
       .lines div{border-bottom:.5pt solid #bbb;height:22pt}
       .pb{page-break-before:always}
-      .foot{margin-top:20pt;font-family:Calibri,Arial,sans-serif;font-size:8.5pt;color:#666;border-top:1pt solid #ccc;padding-top:6pt}
+      .foot{margin-top:20pt;font-family:${style.headingFont},Arial,sans-serif;font-size:8.5pt;color:#666;border-top:1pt solid #ccc;padding-top:6pt}
     </style></head><body><div class="WordSection1">${inner}
     <div class="foot">${esc(prog().name)} · ${esc(prog().facilitator)} · ${esc(prog().email)} · generated ${fmtDateFull(today())}</div>
     </div></body></html>`;
   download(filename, html, "application/msword");
   toast("Word file downloaded. It opens in Word, Pages or Google Docs and stays fully editable.");
+}
 }
 /* the five built-ins keep their old entry points, so buttons elsewhere still work */
 function printStudentProfile(id){ generateDocs("bi_profile", [id], "print"); }
